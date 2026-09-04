@@ -4,7 +4,7 @@ import random
 import os
 import threading
 from flask import Flask
-from telethon import TelegramClient, events, errors, functions
+from telethon import TelegramClient, errors, functions
 from telethon.sessions import StringSession, MemorySession
 from dotenv import load_dotenv
 
@@ -49,6 +49,8 @@ TARGET_GROUPS = [
 ]
 
 IS_RUNNING = True
+
+# 🔻 TIMER SETTING: 3900 seconds = Exactly 65 Minutes
 INTERVAL_SECONDS = 3900
 
 user_client = TelegramClient(StringSession(USER_SESSION_STRING) if USER_SESSION_STRING else MemorySession(), API_ID, API_HASH)
@@ -79,7 +81,10 @@ async def broadcast_cycle():
                 logging.error(f"Error fetching source entity/message: {e}")
 
             if not source_msg:
-                await bot_client.send_message(ADMIN_ID, "❌ **Error:** Source post nahi mila!")
+                try:
+                    await bot_client.send_message(ADMIN_ID, "❌ **Error:** Source post nahi mila!")
+                except Exception:
+                    pass
                 await asyncio.sleep(300)
                 continue
 
@@ -110,16 +115,21 @@ async def broadcast_cycle():
                     failed += 1
                     logging.error(f"Failed delivery to {group}: {e}")
 
+                # Group messaging delay (15 to 25 sec)
                 await asyncio.sleep(random.randint(15, 25))
 
-            await bot_client.send_message(
-                ADMIN_ID,
-                f"📢 **Broadcast Round Finished!**\n\n✅ Success: `{success}`\n❌ Failed: `{failed}`\n\n⏰ Next round in `{INTERVAL_SECONDS // 60}` minutes.",
-            )
+            try:
+                await bot_client.send_message(
+                    ADMIN_ID,
+                    f"📢 **Broadcast Round Finished!**\n\n✅ Success: `{success}`\n❌ Failed: `{failed}`\n\n⏰ Next round in `{INTERVAL_SECONDS // 60}` minutes.",
+                )
+            except Exception as e:
+                logging.error(f"Failed to send update to Admin: {e}")
 
         except Exception as e:
             logging.error(f"Broadcast cycle error: {e}")
 
+        logging.info(f"Waiting {INTERVAL_SECONDS} seconds before next broadcast cycle...")
         await asyncio.sleep(INTERVAL_SECONDS)
 
 
@@ -127,20 +137,16 @@ async def main():
     await user_client.start()
     await bot_client.start(bot_token=BOT_TOKEN)
     
-    # Session String Print Block
-    session_str = user_client.session.save()
-    print("\n" + "="*50)
-    print("YOUR USER_SESSION_STRING:")
-    print(session_str)
-    print("="*50 + "\n")
-    
     await user_client.get_dialogs()
     logging.info("Both User Client and Bot Client are Online!")
+    
+    # Run broadcast cycle as background task
     asyncio.create_task(broadcast_cycle())
+    
+    # Keep bot alive
     await bot_client.run_until_disconnected()
 
 
 if __name__ == "__main__":
-    # Start Flask Web Server in background thread
     threading.Thread(target=run_flask, daemon=True).start()
     asyncio.run(main())
