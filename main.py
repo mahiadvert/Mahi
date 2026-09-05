@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
+# ENV VARIABLES
 API_ID = int(os.getenv("API_ID", "35299699"))
 API_HASH = os.getenv("API_HASH", "5d2740679fc529a1ca52f479a74bcfeb")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8681729506:AAE9HR85CmVfABJDy6MWvu2kYMBnO161fzc")
@@ -19,7 +20,6 @@ USER_SESSION_STRING = os.getenv("USER_SESSION_STRING", "")
 
 SOURCE_CHAT = "RoboroHq"
 
-# ALL 25 TARGET MARKETPLACES
 TARGET_GROUPS = [
     ("@shoreline", 319),
     ("@texted", 24),
@@ -51,15 +51,15 @@ TARGET_GROUPS = [
 IS_RUNNING = True
 INTERVAL_SECONDS = 3900
 
-# MemorySession stops sqlite database lock errors
 user_client = TelegramClient(StringSession(USER_SESSION_STRING) if USER_SESSION_STRING else MemorySession(), API_ID, API_HASH)
 bot_client = TelegramClient(MemorySession(), API_ID, API_HASH)
 
+# FLASK WEB SERVER FOR RENDER WEB SERVICE HEALTH CHECK
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "AdBot is Active and Broadcasting!"
+    return "AdBot is Running 24/7!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
@@ -92,7 +92,6 @@ async def broadcast_cycle():
                 try:
                     target_peer = await user_client.get_input_entity(group)
                     
-                    # Native Telegram Raw Forward Request
                     await user_client(functions.messages.ForwardMessagesRequest(
                         from_peer=source_peer,
                         id=[source_msg.id],
@@ -126,14 +125,15 @@ async def broadcast_cycle():
 
 async def main():
     await user_client.start()
-    
-    if not USER_SESSION_STRING:
-        print("\n" + "="*50)
-        print("YOUR USER_SESSION_STRING:")
-        print(user_client.session.save())
-        print("="*50 + "\n")
-
     await bot_client.start(bot_token=BOT_TOKEN)
+    
+    # Session String Print Block
+    session_str = user_client.session.save()
+    print("\n" + "="*50)
+    print("YOUR USER_SESSION_STRING:")
+    print(session_str)
+    print("="*50 + "\n")
+    
     await user_client.get_dialogs()
     logging.info("Both User Client and Bot Client are Online!")
     asyncio.create_task(broadcast_cycle())
@@ -141,5 +141,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    # Start Flask Web Server in background thread
     threading.Thread(target=run_flask, daemon=True).start()
     asyncio.run(main())
