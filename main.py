@@ -15,7 +15,7 @@ load_dotenv()
 API_ID = int(os.getenv("API_ID", "37754143"))
 API_HASH = os.getenv("API_HASH", "9be499267cc7008df6d5ca09c3f891b7")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8743977323:AAF2C4bXw19fsnTUjndcTxATH1VmqNrRzp4")
-ADMIN_ID = int(os.getenv("ADMIN_ID", 8756617783""))
+ADMIN_ID = int(os.getenv("ADMIN_ID", 8756617783"))
 USER_SESSION_STRING = os.getenv("USER_SESSION_STRING", "")
 
 SOURCE_CHAT = "RoboroHq"
