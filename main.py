@@ -49,13 +49,11 @@ TARGET_GROUPS = [
 ]
 
 IS_RUNNING = True
-# 🔻 TIMER SETTING: 3660 seconds = Exactly 61 Minutes
-INTERVAL_SECONDS = 3660
+INTERVAL_SECONDS = 3900
 
 user_client = TelegramClient(StringSession(USER_SESSION_STRING) if USER_SESSION_STRING else MemorySession(), API_ID, API_HASH)
 bot_client = TelegramClient(MemorySession(), API_ID, API_HASH)
 
-# FLASK WEB SERVER FOR RENDER HEALTH CHECK
 app = Flask(__name__)
 
 @app.route('/')
@@ -81,7 +79,7 @@ async def broadcast_cycle():
                 logging.error(f"Error fetching source message: {e}")
 
             if not source_msg:
-                logging.error("❌ Source post not found! Waiting 5 minutes before retrying...")
+                logging.error("❌ Source post not found! Waiting 5 minutes...")
                 await asyncio.sleep(300)
                 continue
 
@@ -99,8 +97,6 @@ async def broadcast_cycle():
                         top_msg_id=topic_id if topic_id else None,
                         random_id=[random.randint(-2**63, 2**63 - 1)]
                     ))
-                    
-                    # Agar pehla method fail ho toh fallback forward method
                     success += 1
                     logging.info(f"[+] NATIVELY FORWARDED to {group} (Topic: {topic_id})")
 
@@ -109,16 +105,15 @@ async def broadcast_cycle():
                     await asyncio.sleep(e.seconds + 5)
                     continue
                 except Exception as e:
-                    # Alternative Forward Try (Fallback)
                     try:
-                        await user_client.forward_messages(group, source_msg, top_msg_id=topic_id if topic_id else None)
+                        # Fixed line (removed top_msg_id)
+                        await user_client.forward_messages(group, source_msg)
                         success += 1
                         logging.info(f"[+] FORWARDED (Fallback) to {group}")
                     except Exception as err:
                         failed += 1
                         logging.error(f"❌ Failed delivery to {group}: {err}")
 
-                # Safe Delay (35 to 55 seconds) to prevent account FloodWait
                 await asyncio.sleep(random.randint(35, 55))
 
             logging.info(f"✅ Round Finished! Success: {success}, Failed: {failed}")
@@ -141,13 +136,9 @@ async def broadcast_cycle():
 async def main():
     await user_client.start()
     await bot_client.start(bot_token=BOT_TOKEN)
-    
     await user_client.get_dialogs()
     logging.info("Both User Client and Bot Client are Online!")
-    
-    # Run broadcast cycle
     asyncio.create_task(broadcast_cycle())
-    
     await bot_client.run_until_disconnected()
 
 
