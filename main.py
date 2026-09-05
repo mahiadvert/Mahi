@@ -12,10 +12,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 
 # ENV VARIABLES
-API_ID = int(os.getenv("API_ID", "35299699"))
-API_HASH = os.getenv("API_HASH", "5d2740679fc529a1ca52f479a74bcfeb")
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8681729506:AAE9HR85CmVfABJDy6MWvu2kYMBnO161fzc")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "8828879573"))
+API_ID = int(os.getenv("API_ID", "37754143"))
+API_HASH = os.getenv("API_HASH", "9be499267cc7008df6d5ca09c3f891b7")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8743977323:AAF2C4bXw19fsnTUjndcTxATH1VmqNrRzp4")
+ADMIN_ID = int(os.getenv("ADMIN_ID", 8756617783""))
 USER_SESSION_STRING = os.getenv("USER_SESSION_STRING", "")
 
 SOURCE_CHAT = "RoboroHq"
@@ -31,9 +31,7 @@ TARGET_GROUPS = [
     ("@celismarket", 92),
     ("@sectormarket", 14),
     ("@Escrowplace", 21),
-    ("@advertise", 8),
     ("@mythicforum", 2),
-    ("@rareemarket", 2),
     ("@totalsmp", 3757448),
     ("@smandofm_marketplace", 236),
     ("@marketogs", 127871),
@@ -110,7 +108,7 @@ async def broadcast_cycle():
                     failed += 1
                     logging.error(f"Failed delivery to {group}: {e}")
 
-                await asyncio.sleep(random.randint(30, 35))
+                await asyncio.sleep(random.randint(35, 55))
 
             await bot_client.send_message(
                 ADMIN_ID,
