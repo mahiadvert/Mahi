@@ -110,7 +110,7 @@ async def broadcast_cycle():
                     failed += 1
                     logging.error(f"Failed delivery to {group}: {e}")
 
-                await asyncio.sleep(random.randint(15, 25))
+                await asyncio.sleep(random.randint(30, 35))
 
             await bot_client.send_message(
                 ADMIN_ID,
