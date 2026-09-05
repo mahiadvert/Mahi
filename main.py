@@ -4,22 +4,22 @@ import random
 import os
 import threading
 from flask import Flask
-from telethon import TelegramClient, errors, functions
+from telethon import TelegramClient, events, errors, functions
 from telethon.sessions import StringSession, MemorySession
 from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
-# ENV VARIABLES
 API_ID = int(os.getenv("API_ID", "35299699"))
 API_HASH = os.getenv("API_HASH", "5d2740679fc529a1ca52f479a74bcfeb")
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8681729506:AAFAY-_roLbuXUMmwO7uYraJzckqoVTB8bY")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8681729506:AAE9HR85CmVfABJDy6MWvu2kYMBnO161fzc")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "8828879573"))
 USER_SESSION_STRING = os.getenv("USER_SESSION_STRING", "")
 
 SOURCE_CHAT = "RoboroHq"
 
+# ALL 25 TARGET MARKETPLACES
 TARGET_GROUPS = [
     ("@shoreline", 319),
     ("@texted", 24),
@@ -51,6 +51,7 @@ TARGET_GROUPS = [
 IS_RUNNING = True
 INTERVAL_SECONDS = 3900
 
+# MemorySession stops sqlite database lock errors
 user_client = TelegramClient(StringSession(USER_SESSION_STRING) if USER_SESSION_STRING else MemorySession(), API_ID, API_HASH)
 bot_client = TelegramClient(MemorySession(), API_ID, API_HASH)
 
@@ -68,18 +69,17 @@ def run_flask():
 async def broadcast_cycle():
     global IS_RUNNING
     while True:
-        logging.info("🚀 Starting new broadcast cycle...")
         try:
-            source_msg = None
             try:
+                source_peer = await user_client.get_input_entity(SOURCE_CHAT)
                 messages = await user_client.get_messages(SOURCE_CHAT, limit=1)
-                if messages:
-                    source_msg = messages[0]
+                source_msg = messages[0] if messages else None
             except Exception as e:
-                logging.error(f"Error fetching source message: {e}")
+                source_msg = None
+                logging.error(f"Error fetching source entity/message: {e}")
 
             if not source_msg:
-                logging.error("❌ Source post not found! Waiting 5 minutes...")
+                await bot_client.send_message(ADMIN_ID, "❌ **Error:** Source post nahi mila!")
                 await asyncio.sleep(300)
                 continue
 
@@ -90,51 +90,49 @@ async def broadcast_cycle():
                     break
 
                 try:
+                    target_peer = await user_client.get_input_entity(group)
+                    
+                    # Native Telegram Raw Forward Request
                     await user_client(functions.messages.ForwardMessagesRequest(
-                        from_peer=group,
+                        from_peer=source_peer,
                         id=[source_msg.id],
-                        to_peer=group,
+                        to_peer=target_peer,
                         top_msg_id=topic_id if topic_id else None,
                         random_id=[random.randint(-2**63, 2**63 - 1)]
                     ))
+                    
                     success += 1
                     logging.info(f"[+] NATIVELY FORWARDED to {group} (Topic: {topic_id})")
-
                 except errors.FloodWaitError as e:
-                    logging.warning(f"⚠️ Telegram FloodWait! Pausing for {e.seconds + 5}s...")
+                    logging.warning(f"Rate limited! Pausing for {e.seconds + 5}s")
                     await asyncio.sleep(e.seconds + 5)
                     continue
                 except Exception as e:
-                    try:
-                        # Fixed line (removed top_msg_id)
-                        await user_client.forward_messages(group, source_msg)
-                        success += 1
-                        logging.info(f"[+] FORWARDED (Fallback) to {group}")
-                    except Exception as err:
-                        failed += 1
-                        logging.error(f"❌ Failed delivery to {group}: {err}")
+                    failed += 1
+                    logging.error(f"Failed delivery to {group}: {e}")
 
-                await asyncio.sleep(random.randint(35, 55))
+                await asyncio.sleep(random.randint(15, 25))
 
-            logging.info(f"✅ Round Finished! Success: {success}, Failed: {failed}")
-
-            try:
-                await bot_client.send_message(
-                    ADMIN_ID,
-                    f"📢 **Broadcast Round Finished!**\n\n✅ Success: `{success}`\n❌ Failed: `{failed}`\n\n⏰ Next round in `{INTERVAL_SECONDS // 60}` minutes.",
-                )
-            except Exception as e:
-                logging.error(f"Failed to notify Admin Bot: {e}")
+            await bot_client.send_message(
+                ADMIN_ID,
+                f"📢 **Broadcast Round Finished!**\n\n✅ Success: `{success}`\n❌ Failed: `{failed}`\n\n⏰ Next round in `{INTERVAL_SECONDS // 60}` minutes.",
+            )
 
         except Exception as e:
-            logging.error(f"Broadcast cycle critical error: {e}")
+            logging.error(f"Broadcast cycle error: {e}")
 
-        logging.info(f"⏳ Waiting {INTERVAL_SECONDS // 60} minutes for next cycle...")
         await asyncio.sleep(INTERVAL_SECONDS)
 
 
 async def main():
     await user_client.start()
+    
+    if not USER_SESSION_STRING:
+        print("\n" + "="*50)
+        print("YOUR USER_SESSION_STRING:")
+        print(user_client.session.save())
+        print("="*50 + "\n")
+
     await bot_client.start(bot_token=BOT_TOKEN)
     await user_client.get_dialogs()
     logging.info("Both User Client and Bot Client are Online!")
