@@ -25,7 +25,7 @@ TARGET_GROUPS = [
     ("@texted", 24),
     ("@castmart", 5),
     ("@marketunlimited", 71892),
-    ("@porkmarket", 15),,
+    ("@porkmarket", 15),
     ("@buffestmarket", 20),
     ("@celismarket", 92),
     ("@Escrowplace", 21),
